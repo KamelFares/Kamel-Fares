@@ -51,22 +51,28 @@ const transformStyle = computed(() => {
   }
 })
 
+const config = useRuntimeConfig()
+const getAssetUrl = (filename: string) => {
+  const base = config.app.baseURL || '/'
+  return base.endsWith('/') ? `${base}${filename.replace(/^\//, '')}` : `${base}/${filename.replace(/^\//, '')}`
+}
+
 // Cycle frames or show the hiss image
 const currentFrame = computed(() => {
   // Override all other frames if the cat is currently hissing
   if (isHissing.value) {
-    return '/hiss.png'
+    return getAssetUrl('hiss.png')
   }
 
   // Lock on 7.png when the scroll animation finishes
   if (scrollPercent.value >= 1) {
-    return '/7.png'
+    return getAssetUrl('7.png')
   }
 
   const pixelsPerFrame = 55
   const frameCount = 7
   const frameIndex = Math.floor(y.value / pixelsPerFrame) % frameCount
-  return `/${frameIndex + 1}.png`
+  return getAssetUrl(`${frameIndex + 1}.png`)
 })
 </script>
 
