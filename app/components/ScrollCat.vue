@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useWindowScroll, useWindowSize } from '@vueuse/core'
 
 const { y } = useWindowScroll()
 const { width: windowWidth, height: windowHeight } = useWindowSize()
 
 const catSize = 100
+
+// Track scroll direction (up vs down)
+const isScrollingUp = ref(false)
+
+watch(y, (newY, oldY) => {
+  const diff = newY - oldY
+  if (diff < -1) {
+    isScrollingUp.value = true
+  } else if (diff > 1) {
+    isScrollingUp.value = false
+  }
+})
 
 // Hiss state management
 const isHissing = ref(false)
@@ -33,6 +45,11 @@ const scrollPercent = computed(() => {
 
   return Math.min(1, Math.max(0, y.value / targetScrollHeight))
 })
+
+const isSleeping = computed(() => scrollPercent.value >= 1 && !isHissing.value)
+
+// Only flip horizontally across Y axis when scrolling up AND cat is not sleeping
+const shouldFlip = computed(() => isScrollingUp.value && !isSleeping.value)
 
 // Calculate translation position to go to the bottom right with padding
 const transformStyle = computed(() => {
@@ -64,9 +81,9 @@ const currentFrame = computed(() => {
     return getAssetUrl('hiss.png')
   }
 
-  // Lock on 7.png when the scroll animation finishes
+  // Lock on sleep.png when the scroll animation finishes
   if (scrollPercent.value >= 1) {
-    return getAssetUrl('7.png')
+    return getAssetUrl('sleep.png')
   }
 
   const pixelsPerFrame = 55
@@ -95,16 +112,18 @@ const currentFrame = computed(() => {
         <!-- Glowing Yellow Halo Background -->
         <div class="absolute inset-4 rounded-full bg-yellow-400/40 blur-md animate-pulse"></div>
 
-        <!-- Cat Image -->
-        <img
-          :src="currentFrame"
-          alt="Running Cat"
-          @click="triggerHiss"
-          :class="[
-            'relative object-contain select-none filter drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] pointer-events-auto cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95',
-            isHissing ? 'w-[50px] h-[50px]' : 'w-[100px] h-[100px]'
-          ]"
-        />
+        <!-- Cat Image Container (Handles Y-axis flip when scrolling up, except when sleeping) -->
+        <div :class="['transition-transform duration-200', shouldFlip ? '-scale-x-100' : 'scale-x-100']">
+          <img
+            :src="currentFrame"
+            alt="Running Cat"
+            @click="triggerHiss"
+            :class="[
+              'relative object-contain select-none filter drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] pointer-events-auto cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95',
+              isHissing ? 'w-[50px] h-[50px]' : 'w-[100px] h-[100px]'
+            ]"
+          />
+        </div>
       </div>
     </div>
   </ClientOnly>
